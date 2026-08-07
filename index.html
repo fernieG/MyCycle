@@ -81,9 +81,10 @@
 <div class="toast" id="toast"><span id="toastText"></span><button id="undoBtn">Undo</button></div>
 <input type="file" id="importInput" accept="application/json,.json,.mycycle" class="hidden" />
 
-<script src="/app-core.js" defer></script>
-<script src="/app-ui.js" defer></script>
-<script src="/app-data.js" defer></script>
+<!-- app-ui defines the sheet functions referenced while app-core binds controls. -->
+<script src="/app-ui.js?v=2" defer></script>
+<script src="/app-core.js?v=2" defer></script>
+<script src="/app-data.js?v=2" defer></script>
 
 </body>
 </html>

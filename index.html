@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="theme-color" content="#f5f5f7" />
+<title>My Cycle</title>
+<meta name="description" content="A private, local-only menstrual cycle and symptom tracker." />
+<meta name="application-name" content="My Cycle" />
+<meta name="apple-mobile-web-app-title" content="My Cycle" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="brandmark"></div><div><h1>My Cycle</h1><small>Private on this iPhone</small></div></div>
+    <button class="iconbtn" id="settingsBtn" aria-label="Open settings">⋯</button>
+  </header>
+  <div class="prototype-pill"><span class="dot"></span> Interactive prototype · local storage only</div>
+
+  <main>
+    <section class="view active" id="todayView">
+      <div class="hero">
+        <div class="kicker" id="heroDate"></div>
+        <h2 id="cycleTitle">Cycle status</h2>
+        <p id="cycleSubtitle"></p>
+        <div class="confidence" id="confidenceBadge"></div>
+      </div>
+      <button class="primary" id="periodAction"></button>
+      <div class="secondary-row">
+        <button class="secondary" id="changeDatesBtn">Change dates</button>
+        <button class="secondary" id="flowBtn">Log flow</button>
+      </div>
+
+      <div id="safetyCard" class="warning hidden">
+        <div>!</div><div><strong>Consider prompt medical assessment</strong><p>Sudden severe pelvic pain, fainting, fever, vomiting or unusually heavy bleeding needs professional advice. This app does not diagnose.</p></div>
+      </div>
+
+      <div class="section-head"><h3>Today’s symptoms</h3><button id="clearSymptomsBtn">Clear</button></div>
+      <div class="symptoms" id="symptomGrid"></div>
+      <button class="note-btn" id="noteBtn">Add a private note</button>
+    </section>
+
+    <section class="view" id="calendarView">
+      <div class="month-nav"><h2 id="monthTitle"></h2><div class="nav-actions"><button id="prevMonth">‹</button><button id="todayMonth">•</button><button id="nextMonth">›</button></div></div>
+      <div class="card">
+        <div class="weekdays"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="legend"><span><i class="confirmed"></i> Confirmed</span><span><i class="forecast"></i> Predicted</span><span>• Symptom logged</span></div>
+      </div>
+      <div class="section-head"><h3>Cycle timeline</h3></div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <section class="view" id="insightsView">
+      <div class="section-head" style="margin-top:2px"><h3>Insights</h3><button id="howCalculatedBtn">How calculated</button></div>
+      <div class="metrics" id="metrics"></div>
+      <div class="section-head"><h3>Cycle length</h3></div>
+      <div class="card"><div class="chart" id="cycleChart"></div></div>
+      <div class="section-head"><h3>Most recorded</h3></div>
+      <div class="card" id="topSymptoms"></div>
+      <div class="section-head"><h3>Medical summary</h3></div>
+      <button class="primary" id="printSummaryBtn" style="margin-top:0">Review and export PDF</button>
+    </section>
+  </main>
+</div>
+
+<nav class="tabbar" aria-label="Main navigation">
+  <button class="active" data-tab="today"><b>◉</b>Today</button>
+  <button data-tab="calendar"><b>▦</b>Calendar</button>
+  <button data-tab="insights"><b>⌁</b>Insights</button>
+</nav>
+
+<div class="sheet-backdrop" id="sheetBackdrop"><div class="sheet" id="sheet"><div class="handle"></div><div id="sheetContent"></div></div></div>
+<div class="toast" id="toast"><span id="toastText"></span><button id="undoBtn">Undo</button></div>
+<input type="file" id="importInput" accept="application/json,.json,.mycycle" class="hidden" />
+
+<script src="/app-core.js" defer></script>
+<script src="/app-ui.js" defer></script>
+<script src="/app-data.js" defer></script>
+
+</body>
+</html>

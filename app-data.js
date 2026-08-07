@@ -1,0 +1,60 @@
+function download(name,text,type){const blob=new Blob([text],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+function bytesToBase64(bytes){let out='';const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)out+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(out)}
+function base64ToBytes(value){const binary=atob(value),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);return bytes}
+async function deriveBackupKey(passphrase,salt,usage){const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(passphrase),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:BACKUP_ITERATIONS,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,[usage])}
+async function createEncryptedBackup(passphrase){
+  if(!crypto?.subtle)throw new Error('Secure backup encryption is unavailable in this preview.');
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await deriveBackupKey(passphrase,salt,'encrypt');
+  const payload={app:'My Cycle',schemaVersion:2,exportedAt:new Date().toISOString(),state:clone(state),predictions:serializablePrediction()};
+  const encrypted=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(payload)));
+  return {format:BACKUP_FORMAT,version:1,kdf:{name:'PBKDF2',hash:'SHA-256',iterations:BACKUP_ITERATIONS,salt:bytesToBase64(salt)},cipher:{name:'AES-GCM',iv:bytesToBase64(iv)},payload:bytesToBase64(new Uint8Array(encrypted))};
+}
+async function decryptEncryptedBackup(envelope,passphrase){
+  if(envelope?.format!==BACKUP_FORMAT||envelope?.cipher?.name!=='AES-GCM'||envelope?.kdf?.name!=='PBKDF2')throw new Error('Unsupported backup format.');
+  const salt=base64ToBytes(envelope.kdf.salt),iv=base64ToBytes(envelope.cipher.iv),cipher=base64ToBytes(envelope.payload),key=await deriveBackupKey(passphrase,salt,'decrypt');
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,cipher);return JSON.parse(new TextDecoder().decode(plain));
+}
+async function exportBackupWithPassphrase(passphrase){state.lastBackup=new Date().toLocaleString();save();const envelope=await createEncryptedBackup(passphrase);download(`my-cycle-backup-${todayISO()}.mycycle`,JSON.stringify(envelope,null,2),'application/json');return envelope}
+function openBackupSheet(){openSheet(`<h2>Create encrypted backup</h2><p>Choose a password you can remember. It is required to restore this file and cannot be recovered by the app.</p><label for="backupPassword" class="smallprint">Backup password</label><input class="field" id="backupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"><label for="backupPasswordConfirm" class="smallprint">Confirm password</label><input class="field" id="backupPasswordConfirm" type="password" autocomplete="new-password" minlength="8" placeholder="Repeat the password"><div class="status-note">The complete history and prediction snapshot are encrypted on this device with PBKDF2 and AES-GCM before the file is created.</div><button class="primary" id="confirmBackupBtn">Create protected file</button>`);document.getElementById('confirmBackupBtn').onclick=async()=>{const password=document.getElementById('backupPassword').value,confirmPassword=document.getElementById('backupPasswordConfirm').value;if(password.length<8){alert('Use a password with at least 8 characters.');return}if(password!==confirmPassword){alert('The passwords do not match.');return}const btn=document.getElementById('confirmBackupBtn');btn.disabled=true;btn.textContent='Encrypting…';try{await exportBackupWithPassphrase(password);closeSheet();setUndo('Encrypted backup created',()=>{})}catch(err){alert(err.message||'The backup could not be created.');btn.disabled=false;btn.textContent='Create protected file'}}}
+function exportCSV(){
+  const rows=[['type','date','end_date','flow','symptoms','note']],periodStarts=new Set();
+  state.periods.forEach(p=>{periodStarts.add(p.start);rows.push(['period',p.start,p.end||'',state.flows[p.start]||'',Object.entries(state.symptoms[p.start]||{}).map(([k,v])=>`${symptomLabel(k)}:${severity[v]}`).join('|'),state.notes[p.start]||''])});
+  const dated=new Set([...Object.keys(state.symptoms),...Object.keys(state.flows),...Object.keys(state.notes)]);
+  [...dated].sort().forEach(d=>{if(!periodStarts.has(d))rows.push(['daily',d,'',state.flows[d]||'',Object.entries(state.symptoms[d]||{}).map(([k,v])=>`${symptomLabel(k)}:${severity[v]}`).join('|'),state.notes[d]||''])});
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');download(`my-cycle-data-${todayISO()}.csv`,csv,'text/csv');closeSheet();
+}
+function backupStateFromPayload(payload){const imported=normalizeState(payload?.state||payload);validatePeriodCollection(imported.periods);return imported}
+function mergeStates(currentRaw,importedRaw){
+  const current=normalizeState(currentRaw),incoming=normalizeState(importedRaw),merged=clone(current),stats={addedCycles:0,duplicates:0,conflicts:0};
+  for(const p of [...incoming.periods].sort((a,b)=>a.start.localeCompare(b.start))){
+    if(merged.periods.some(x=>x.start===p.start&&(x.end||null)===(p.end||null))){stats.duplicates++;continue}
+    if(findOverlap(p.start,p.end,null,merged.periods)){stats.conflicts++;continue}
+    merged.periods.push({...p,id:merged.periods.some(x=>x.id===p.id)?uid():p.id});stats.addedCycles++;
+  }
+  for(const [d,items] of Object.entries(incoming.symptoms)){merged.symptoms[d]=merged.symptoms[d]||{};for(const [id,level] of Object.entries(items||{}))merged.symptoms[d][id]=Math.max(Number(merged.symptoms[d][id]||0),Number(level||0))}
+  for(const [d,flow] of Object.entries(incoming.flows))if(!merged.flows[d])merged.flows[d]=flow;
+  for(const [d,note] of Object.entries(incoming.notes))if(!merged.notes[d]&&note)merged.notes[d]=note;
+  validatePeriodCollection(merged.periods);return {state:merged,stats};
+}
+function applyRestore(payload,mode){const imported=backupStateFromPayload(payload);if(mode==='replace'){state=imported;save();return {mode,addedCycles:imported.periods.length,duplicates:0,conflicts:0}}const result=mergeStates(state,imported);state=result.state;save();return {mode,...result.stats}}
+function showRestoreChoices(payload){
+  const imported=backupStateFromPayload(payload),starts=imported.periods.map(p=>p.start).sort(),dateRange=starts.length?`${starts[0]} to ${starts.at(-1)}`:'No cycles';pendingRestore=payload;
+  openSheet(`<h2>Restore backup</h2><p>Backup created ${escapeHtml(payload.exportedAt?new Date(payload.exportedAt).toLocaleString():'on an unknown date')}.</p><div class="group"><div class="row"><span>Cycles</span><strong>${imported.periods.length}</strong></div><div class="row"><span>Date range</span><strong>${dateRange}</strong></div><div class="row"><span>Daily records</span><strong>${new Set([...Object.keys(imported.symptoms),...Object.keys(imported.flows),...Object.keys(imported.notes)]).size}</strong></div></div><div class="status-note"><strong>Merge</strong> keeps current data, skips duplicate cycles and refuses overlapping imported cycles. <strong>Replace</strong> removes current local data and restores the backup.</div><div class="action-stack"><button class="primary" id="mergeRestoreBtn">Merge without duplicates</button><button class="secondary danger" id="replaceRestoreBtn">Replace local data</button></div>`);
+  document.getElementById('mergeRestoreBtn').onclick=()=>{const result=applyRestore(pendingRestore,'merge');closeSheet();alert(`Restore complete. Added ${result.addedCycles} cycles; skipped ${result.duplicates} duplicates and ${result.conflicts} overlaps.`)};
+  document.getElementById('replaceRestoreBtn').onclick=()=>{if(confirm('Replace all current local data with this backup?')){applyRestore(pendingRestore,'replace');closeSheet()}};
+}
+function openRestorePasswordSheet(envelope){openSheet(`<h2>Unlock backup</h2><p>Enter the password used when this encrypted backup was created.</p><input class="field" id="restorePassword" type="password" autocomplete="current-password" placeholder="Backup password"><button class="primary" id="unlockBackupBtn">Unlock backup</button>`);document.getElementById('unlockBackupBtn').onclick=async()=>{const btn=document.getElementById('unlockBackupBtn');btn.disabled=true;btn.textContent='Unlocking…';try{const payload=await decryptEncryptedBackup(envelope,document.getElementById('restorePassword').value);showRestoreChoices(payload)}catch(err){alert('The password is incorrect or the backup is damaged.');btn.disabled=false;btn.textContent='Unlock backup'}}}
+document.getElementById('importInput').onchange=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const parsed=JSON.parse(reader.result);if(parsed.format===BACKUP_FORMAT)openRestorePasswordSheet(parsed);else if(parsed.periods&&parsed.profile){if(confirm('This is an older unencrypted prototype backup. Continue to review restore choices?'))showRestoreChoices({state:parsed,exportedAt:parsed.exportedAt})}else throw new Error()}catch{alert('This backup file could not be read.')}};reader.readAsText(file);e.target.value=''};
+
+document.getElementById('howCalculatedBtn').onclick=()=>{const p=predictionInfo();openSheet(`<h2>How this was calculated</h2><div class="group"><div class="row"><span>Cycles used</span><strong>${p?.cyclesUsed||0}</strong></div><div class="row"><span>Typical cycle</span><strong>${p?.cycle||'—'} days</strong></div><div class="row"><span>Prediction window</span><strong>±${p?.window||'—'} days</strong></div><div class="row"><span>Confidence</span><strong>${p?.confidence||'—'}</strong></div></div><p>${p?.cyclesUsed>=3?'The prototype uses the median of up to six recent confirmed cycle lengths.':'With fewer than three completed cycles, the prototype uses the typical cycle length set in Settings.'}</p><p class="smallprint">Predictions are estimates. They do not confirm ovulation, fertility, pregnancy or a medical condition.</p>`)};
+document.getElementById('printSummaryBtn').onclick=()=>{
+  const pi=predictionInfo(),periodRows=[...state.periods].sort((a,b)=>b.start.localeCompare(a.start)).map(p=>`<tr><td>${p.start}</td><td>${p.end||'Active'}</td><td>${p.end?daysBetween(p.start,p.end)+1:'—'}</td></tr>`).join('');
+  const w=window.open('','_blank');w.document.write(`<!doctype html><html><head><meta name="viewport" content="width=device-width"><title>My Cycle Medical Summary</title><style>body{font-family:-apple-system,system-ui;padding:32px;color:#171719}h1{font-size:30px}p{color:#555}table{border-collapse:collapse;width:100%;margin:20px 0}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}.box{background:#f5f5f7;padding:16px;border-radius:16px;margin:14px 0}@media print{button{display:none}}</style></head><body><h1>My Cycle summary</h1><p>Generated locally on ${new Date().toLocaleString()}.</p><div class="box"><strong>Prediction:</strong> next start around ${nextPrediction()?fmtShort.format(nextPrediction()):'not available'} · ${pi?.confidence||'limited'} confidence.<br><small>Predictions are estimates based on confirmed cycle history.</small></div><h2>Confirmed periods</h2><table><thead><tr><th>Start</th><th>End</th><th>Duration</th></tr></thead><tbody>${periodRows}</tbody></table><p>This summary was created by a tracking prototype and is not a diagnosis.</p><button onclick="window.print()">Print or Save as PDF</button></body></html>`);w.document.close();
+};
+
+renderAll();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+  });
+}

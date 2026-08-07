@@ -1,5 +1,5 @@
-const CACHE = 'my-cycle-v1';
-const APP_SHELL = ['/', '/index.html', '/styles.css', '/app-core.js', '/app-ui.js', '/app-data.js', '/manifest.webmanifest', '/icon.svg'];
+const CACHE = 'my-cycle-v2';
+const APP_SHELL = ['/', '/index.html', '/styles.css', '/app-ui.js?v=2', '/app-core.js?v=2', '/app-data.js?v=2', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)));

@@ -14,7 +14,7 @@
 <meta name="format-detection" content="telephone=no" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-<link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/styles.css?v=3" />
 </head>
 <body>
 <div class="app">
@@ -48,11 +48,11 @@
     </section>
 
     <section class="view" id="calendarView">
-      <div class="month-nav"><h2 id="monthTitle"></h2><div class="nav-actions"><button id="prevMonth">‹</button><button id="todayMonth">•</button><button id="nextMonth">›</button></div></div>
+      <div class="month-nav"><h2 id="monthTitle"></h2><div class="nav-actions"><button id="prevMonth" aria-label="Previous month">‹</button><button id="todayMonth" aria-label="Current month">•</button><button id="nextMonth" aria-label="Next month">›</button></div></div>
       <div class="card">
         <div class="weekdays"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
         <div class="calendar-grid" id="calendarGrid"></div>
-        <div class="legend"><span><i class="confirmed"></i> Confirmed</span><span><i class="forecast"></i> Predicted</span><span>• Symptom logged</span></div>
+        <div class="legend"><span><i class="confirmed"></i> Confirmed</span><span><i class="forecast"></i> Predicted</span><span class="pain-key"><b>•</b> mild</span><span class="pain-key"><b>••</b> moderate</span><span class="pain-key"><b>•••</b> severe pain</span></div>
       </div>
       <div class="section-head"><h3>Cycle timeline</h3></div>
       <div class="timeline" id="timeline"></div>
@@ -63,6 +63,8 @@
       <div class="metrics" id="metrics"></div>
       <div class="section-head"><h3>Cycle length</h3></div>
       <div class="card"><div class="chart" id="cycleChart"></div></div>
+      <div class="section-head"><h3>Pain & symptoms this cycle</h3></div>
+      <div class="card"><div class="symptom-trend" id="symptomTrend"></div></div>
       <div class="section-head"><h3>Most recorded</h3></div>
       <div class="card" id="topSymptoms"></div>
       <div class="section-head"><h3>Medical summary</h3></div>
@@ -79,12 +81,10 @@
 
 <div class="sheet-backdrop" id="sheetBackdrop"><div class="sheet" id="sheet"><div class="handle"></div><div id="sheetContent"></div></div></div>
 <div class="toast" id="toast"><span id="toastText"></span><button id="undoBtn">Undo</button></div>
-<input type="file" id="importInput" accept="application/json,.json,.mycycle" class="hidden" />
+<input type="file" id="importInput" accept="application/json,text/csv,.json,.mycycle,.csv" class="hidden" />
 
-<!-- app-ui defines the sheet functions referenced while app-core binds controls. -->
-<script src="/app-ui.js?v=2" defer></script>
-<script src="/app-core.js?v=2" defer></script>
-<script src="/app-data.js?v=2" defer></script>
-
+<script src="/app-ui.js?v=3" defer></script>
+<script src="/app-core.js?v=3" defer></script>
+<script src="/app-data.js?v=3" defer></script>
 </body>
 </html>

@@ -1,54 +1,61 @@
-# My Cycle — Validation Agents
+# My Cycle — Test Agents
 
-These roles define how future changes to My Cycle should be checked before release.
+This file defines the automated and human validation agents for the My Cycle app. The executable source checks live in `tests/run_agents.py`.
 
-## Release rules
+## Ground rules
 
-- Use synthetic test data only.
-- Never commit a user's exported health data or backups.
-- A critical privacy, data-loss, restore, or prediction-integrity defect blocks release.
-- Confirmed period history and predictions must always remain distinguishable.
+- Menstrual, symptom, medication and note data must remain on the user's device.
+- No remote database, analytics, advertising, account or automatic cloud sync.
+- Confirmed history and predicted dates must always be distinguishable.
+- Predictions are estimates based only on confirmed cycle starts.
+- A critical privacy, data-loss, restore or prediction defect blocks release.
+- Tests use synthetic fixtures or source-level checks only; never commit personal health data.
 
-## Test Orchestrator
+## Agent 1 — Orchestrator
 
-Maps each requirement to a test, collects failures and produces the final release report.
+Runs all release checks and compiles the release result. Gate: no unresolved critical or major defect affecting recording, local persistence, prediction correctness, export, restore or offline behavior.
 
-## Core Journey Agent
+## Agent 2 — Core Journey
 
-Checks one-tap start/end, Undo, date corrections, flow, symptoms, severity and notes.
+Checks one-tap period start/end, date correction, flow, symptoms, custom symptoms, severity, notes, and Undo behavior.
 
-## Calendar & Prediction Agent
+## Agent 3 — Calendar & Prediction
 
-Checks confirmed vs predicted dates, recent-cycle median logic, limited-history fallback, irregular-cycle uncertainty and recalculation after a new confirmed start.
+Checks confirmed/predicted distinction, conservative prediction logic, DST-safe day arithmetic, calendar pain markers, and selected-date editing.
 
-## Privacy & Offline Agent
+## Agent 4 — Privacy & Offline
 
-Checks local-only storage, absence of trackers/analytics/remote health-data calls and offline app-shell support.
+Checks local-only storage, absence of outbound health-data APIs, PWA shell versioning, and offline cache structure.
 
-## Export & Restore Agent
+## Agent 5 — Export & Restore
 
-Checks password-protected backup, PBKDF2/AES-GCM encryption, CSV completeness, merge/replace restore and duplicate/overlap handling.
+Checks encrypted backup primitives, CSV export/import, merge/replace restore behavior, and duplicate/overlap prevention.
 
-## Data Integrity & Resilience Agent
+## Agent 6 — Data Integrity & Resilience
 
-Checks impossible dates, overlapping cycles, corrupt local data, deletion and safe recovery behavior.
+Checks date validation, overlap rejection, selected-record deletion, corrupt-state fallback, day rollover refresh, and schema normalization.
 
-## Accessibility & Usability Agent
+## Agent 7 — Accessibility & Usability
 
-Checks 44×44 targets, full calendar labels, dark mode, Reduced Motion, non-color-only status and common iPhone widths.
+Checks meaningful calendar labels, touch-target CSS, Reduced Motion, dark mode, and non-colour-only pain indicators.
 
-## Visual Quality Agent
+## Agent 8 — Visual Quality & Insights
 
-Checks minimalist three-tab hierarchy, one dominant Today action and clear distinction between confirmed and predicted information.
+Checks the three-tab hierarchy, pain/symptom trend visualization, symptom ordering, and mobile-first layout.
 
-## Human iPhone Validation
+## Human Validation Agent
 
-Before relying on the app personally, test the deployed HTTPS version in Safari and after **Add to Home Screen**:
+Final iPhone checks:
 
-1. Start/end a period and Undo.
-2. Add/edit/delete symptoms, flow and notes.
-3. Close and reopen the Home Screen app and confirm local persistence.
-4. Create an encrypted backup, reset local data and restore it.
-5. Test Calendar and predictions.
-6. Test offline after the app has loaded once online.
-7. Confirm the local-data-loss warning is clear.
+1. Today shows the correct period/cycle day after the device date changes.
+2. Any calendar date can be opened and its symptoms, bleeding/flow and note can be edited.
+3. CSV import from Files opens a merge/replace review instead of failing silently.
+4. Calendar pain severity markers are understandable without relying on colour alone.
+5. Insights renders the pain/symptom trend without horizontal page overflow.
+6. Existing local data remains present after the v3 web-app update.
+
+## Run
+
+```bash
+python tests/run_agents.py
+```

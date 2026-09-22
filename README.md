@@ -41,3 +41,7 @@ The release checks use synthetic/source-level data only.
 ## Deployment
 
 This is a static Progressive Web App deployed from `main` to Vercel. No server functions, database or environment variables containing health information are required.
+
+## Release gate
+
+The v4 branch must pass the Node release-agent suite before merge to `main`, followed by the human iPhone checks in `AGENTS.md`.

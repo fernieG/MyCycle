@@ -14,7 +14,7 @@
 <meta name="format-detection" content="telephone=no" />
 <link rel="manifest" href="/manifest.webmanifest" />
 <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-<link rel="stylesheet" href="/styles.css?v=3" />
+<link rel="stylesheet" href="/styles.css?v=4" />
 </head>
 <body>
 <div class="app">
@@ -22,69 +22,83 @@
     <div class="brand"><div class="brandmark"></div><div><h1>My Cycle</h1><small>Private on this iPhone</small></div></div>
     <button class="iconbtn" id="settingsBtn" aria-label="Open settings">⋯</button>
   </header>
-  <div class="prototype-pill"><span class="dot"></span> Interactive prototype · local storage only</div>
+  <div class="prototype-pill"><span class="dot"></span> Private · local storage only</div>
 
-  <main>
-    <section class="view active" id="todayView">
-      <div class="hero">
-        <div class="kicker" id="heroDate"></div>
-        <h2 id="cycleTitle">Cycle status</h2>
-        <p id="cycleSubtitle"></p>
-        <div class="confidence" id="confidenceBadge"></div>
-      </div>
-      <button class="primary" id="periodAction"></button>
-      <div class="secondary-row">
-        <button class="secondary" id="changeDatesBtn">Change dates</button>
-        <button class="secondary" id="flowBtn">Log flow</button>
-      </div>
-
-      <div id="safetyCard" class="warning hidden">
-        <div>!</div><div><strong>Consider prompt medical assessment</strong><p>Sudden severe pelvic pain, fainting, fever, vomiting or unusually heavy bleeding needs professional advice. This app does not diagnose.</p></div>
-      </div>
-
-      <div class="section-head"><h3>Today’s symptoms</h3><button id="clearSymptomsBtn">Clear</button></div>
-      <div class="symptoms" id="symptomGrid"></div>
-      <button class="note-btn" id="noteBtn">Add a private note</button>
+  <main class="single-screen">
+    <section class="hero">
+      <div class="kicker" id="heroDate"></div>
+      <h2 id="cycleTitle">Cycle status</h2>
+      <p id="cycleSubtitle"></p>
+      <div class="confidence" id="confidenceBadge"></div>
     </section>
 
-    <section class="view" id="calendarView">
-      <div class="month-nav"><h2 id="monthTitle"></h2><div class="nav-actions"><button id="prevMonth" aria-label="Previous month">‹</button><button id="todayMonth" aria-label="Current month">•</button><button id="nextMonth" aria-label="Next month">›</button></div></div>
-      <div class="card">
-        <div class="weekdays"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
-        <div class="calendar-grid" id="calendarGrid"></div>
-        <div class="legend"><span><i class="confirmed"></i> Confirmed</span><span><i class="forecast"></i> Predicted</span><span class="pain-key"><b>•</b> mild</span><span class="pain-key"><b>••</b> moderate</span><span class="pain-key"><b>•••</b> severe pain</span></div>
-      </div>
-      <div class="section-head"><h3>Cycle timeline</h3></div>
-      <div class="timeline" id="timeline"></div>
-    </section>
+    <button class="primary" id="periodAction"></button>
+    <div class="secondary-row">
+      <button class="secondary" id="changeDatesBtn">Change dates</button>
+      <button class="secondary" id="flowBtn">Log flow</button>
+    </div>
 
-    <section class="view" id="insightsView">
-      <div class="section-head" style="margin-top:2px"><h3>Insights</h3><button id="howCalculatedBtn">How calculated</button></div>
-      <div class="metrics" id="metrics"></div>
-      <div class="section-head"><h3>Cycle length</h3></div>
-      <div class="card"><div class="chart" id="cycleChart"></div></div>
-      <div class="section-head"><h3>Pain & symptoms this cycle</h3></div>
-      <div class="card"><div class="symptom-trend" id="symptomTrend"></div></div>
-      <div class="section-head"><h3>Most recorded</h3></div>
-      <div class="card" id="topSymptoms"></div>
-      <div class="section-head"><h3>Medical summary</h3></div>
-      <button class="primary" id="printSummaryBtn" style="margin-top:0">Review and export PDF</button>
-    </section>
+    <div id="safetyCard" class="warning hidden">
+      <div>!</div><div><strong>Consider prompt medical assessment</strong><p>Sudden severe pelvic pain, fainting, fever, vomiting or unusually heavy bleeding needs professional advice. This app does not diagnose.</p></div>
+    </div>
+
+    <details class="collapsible-card" id="symptomsPanel" open>
+      <summary>
+        <span class="panel-title"><small id="selectedDateLabel">Today</small><strong>Symptoms & notes</strong></span>
+        <span class="chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="panel-body">
+        <div class="section-head compact"><h3>Log for this day</h3><button id="clearSymptomsBtn">Clear symptoms</button></div>
+        <div class="symptoms" id="symptomGrid"></div>
+        <button class="note-btn" id="noteBtn">Add a private note</button>
+      </div>
+    </details>
+
+    <details class="collapsible-card" id="calendarPanel" open>
+      <summary>
+        <span class="panel-title"><small>Choose any day</small><strong>Calendar</strong></span>
+        <span class="chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="panel-body">
+        <div class="month-nav"><h2 id="monthTitle"></h2><div class="nav-actions"><button id="prevMonth" aria-label="Previous month">‹</button><button id="todayMonth" aria-label="Current month">•</button><button id="nextMonth" aria-label="Next month">›</button></div></div>
+        <div class="card calendar-card">
+          <div class="weekdays"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+          <div class="legend"><span><i class="confirmed"></i> Confirmed</span><span><i class="forecast"></i> Predicted</span><span class="pain-key"><b>•</b> mild</span><span class="pain-key"><b>••</b> moderate</span><span class="pain-key"><b>•••</b> severe pain</span></div>
+        </div>
+        <p class="selection-hint">Tap a date to make it the active day above. Bleeding and symptom changes save immediately.</p>
+      </div>
+    </details>
+
+    <details class="collapsible-card" id="historyPanel">
+      <summary>
+        <span class="panel-title"><small>Patterns & confirmed cycles</small><strong>History & insights</strong></span>
+        <span class="chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="panel-body">
+        <div class="section-head compact"><h3>Cycle timeline</h3></div>
+        <div class="timeline" id="timeline"></div>
+        <div class="section-head"><h3>Insights</h3><button id="howCalculatedBtn">How calculated</button></div>
+        <div class="metrics" id="metrics"></div>
+        <div class="section-head"><h3>Cycle length</h3></div>
+        <div class="card"><div class="chart" id="cycleChart"></div></div>
+        <div class="section-head"><h3>Pain & symptoms this cycle</h3></div>
+        <div class="card"><div class="symptom-trend" id="symptomTrend"></div></div>
+        <div class="section-head"><h3>Most recorded</h3></div>
+        <div class="card" id="topSymptoms"></div>
+        <div class="section-head"><h3>Medical summary</h3></div>
+        <button class="primary" id="printSummaryBtn" style="margin-top:0">Review and export PDF</button>
+      </div>
+    </details>
   </main>
 </div>
-
-<nav class="tabbar" aria-label="Main navigation">
-  <button class="active" data-tab="today"><b>◉</b>Today</button>
-  <button data-tab="calendar"><b>▦</b>Calendar</button>
-  <button data-tab="insights"><b>⌁</b>Insights</button>
-</nav>
 
 <div class="sheet-backdrop" id="sheetBackdrop"><div class="sheet" id="sheet"><div class="handle"></div><div id="sheetContent"></div></div></div>
 <div class="toast" id="toast"><span id="toastText"></span><button id="undoBtn">Undo</button></div>
 <input type="file" id="importInput" accept="application/json,text/csv,.json,.mycycle,.csv" class="hidden" />
 
-<script src="/app-ui.js?v=3" defer></script>
-<script src="/app-core.js?v=3" defer></script>
-<script src="/app-data.js?v=3" defer></script>
+<script src="/app-ui.js?v=4" defer></script>
+<script src="/app-core.js?v=4" defer></script>
+<script src="/app-data.js?v=4" defer></script>
 </body>
 </html>

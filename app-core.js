@@ -8,7 +8,8 @@ const fmtShort=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short'});
 const symptoms=[
   ['bleeding','Bleeding'],['breast','Breast pain'],['pelvic','Pelvic pain'],['right','Right-sided pain'],['left','Left-sided pain'],
   ['back','Lower-back pain'],['thigh','Thigh or leg pain'],['fatigue','Fatigue'],['nausea','Nausea'],['bloating','Bloating'],
-  ['constipation','Constipation'],['diarrhoea','Diarrhea'],['urinary','Urinary discomfort'],['other','Other · add manually'],['headache','Headache']
+  ['constipation','Constipation'],['diarrhoea','Diarrhea'],['urinary','Urinary discomfort'],['headache','Headache'],
+  ['hotflash','Hot flashes / night heat'],['other','Other · add manually']
 ];
 const PAIN_IDS=new Set(['breast','pelvic','right','left','back','thigh','headache']);
 const FLOW_LEVEL={Spotting:1,Light:1,Medium:2,Heavy:3};
@@ -37,6 +38,7 @@ function symptomIdFromLabel(label){
     'bleeding':'bleeding','heavy bleeding':'bleeding','breast pain':'breast','pelvic pain':'pelvic','right-sided pain':'right','right sided pain':'right',
     'left-sided pain':'left','left sided pain':'left','lower-back pain':'back','lower back pain':'back','thigh or leg pain':'thigh','fatigue':'fatigue',
     'nausea':'nausea','bloating':'bloating','constipation':'constipation','diarrhoea':'diarrhoea','diarrhea':'diarrhoea','urinary discomfort':'urinary','headache':'headache',
+    'hot flashes':'hotflash','hot flash':'hotflash','night heat':'hotflash','night sweats':'hotflash','hot flashes / night heat':'hotflash',
     'pelvic':'pelvic','right':'right','left':'left','back':'back','thigh':'thigh','urinary':'urinary','heavy':'bleeding'
   };
   if(aliases[lower])return aliases[lower];
@@ -50,12 +52,12 @@ function customSymptomsForDate(di){return Object.entries(state.symptoms[di]||{})
 
 function defaultState(){
   const t=todayISO();
-  return {version:4,profile:{typicalCycleLength:28,typicalPeriodDuration:5},periods:[{id:uid(),start:t,end:null,source:'prototype setup'}],symptoms:{[t]:{pelvic:2,right:2,back:2}},flows:{[t]:'Medium'},notes:{},lastBackup:null,created:t};
+  return {version:4,profile:{typicalCycleLength:28,typicalPeriodDuration:5},periods:[{id:uid(),start:t,end:null,endKnown:true,source:'prototype setup'}],symptoms:{[t]:{pelvic:2,right:2,back:2}},flows:{[t]:'Medium'},notes:{},lastBackup:null,created:t};
 }
 function normalizeState(raw){
   const fallback=defaultState(),input=raw&&typeof raw==='object'?raw:{};
   const profile=input.profile&&typeof input.profile==='object'?input.profile:{};
-  const periods=Array.isArray(input.periods)?input.periods.filter(p=>p&&/^\d{4}-\d{2}-\d{2}$/.test(p.start||'')).map(p=>({id:String(p.id||uid()),start:p.start,end:p.end||null,source:p.source||'manual'})):fallback.periods;
+  const periods=Array.isArray(input.periods)?input.periods.filter(p=>p&&/^\d{4}-\d{2}-\d{2}$/.test(p.start||'')).map(p=>({id:String(p.id||uid()),start:p.start,end:p.end||null,endKnown:p.endKnown!==false,source:p.source||'manual'})):fallback.periods;
   return {
     version:4,
     profile:{typicalCycleLength:Number(profile.typicalCycleLength)||28,typicalPeriodDuration:Number(profile.typicalPeriodDuration)||5},
@@ -70,7 +72,7 @@ function normalizeState(raw){
 function loadState(){try{const raw=localStorage.getItem(KEY);return raw?normalizeState(JSON.parse(raw)):defaultState()}catch(e){return defaultState()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
 function activePeriod(){return state.periods.find(p=>!p.end)}
-function completedPeriods(){return state.periods.filter(p=>p.end).sort((a,b)=>a.start.localeCompare(b.start))}
+function completedPeriods(){return state.periods.filter(p=>p.end&&p.endKnown!==false).sort((a,b)=>a.start.localeCompare(b.start))}
 function cycleLengths(){const ps=[...state.periods].sort((a,b)=>a.start.localeCompare(b.start));let r=[];for(let i=1;i<ps.length;i++){const n=daysBetween(ps[i-1].start,ps[i].start);if(n>=15&&n<=60)r.push(n)}return r.slice(-6)}
 function periodDurations(){return completedPeriods().map(p=>daysBetween(p.start,p.end)+1).filter(n=>n>0&&n<15).slice(-6)}
 function predictionInfo(){
@@ -191,7 +193,7 @@ document.getElementById('undoBtn').onclick=()=>{if(undoAction)undoAction();undoA
 document.getElementById('periodAction').onclick=()=>{
   const t=todayISO(),active=activePeriod(),old=JSON.stringify(state.periods);
   if(active){if(t<active.start){alert('The end date cannot be before the start date.');return}active.end=t;setUndo('Period ended',()=>{state.periods=JSON.parse(old);save()})}
-  else{const conflict=findOverlap(t,null);if(conflict){alert(`This period would overlap the cycle starting ${conflict.start}. Edit the existing cycle dates first.`);return}state.periods.push({id:uid(),start:t,end:null,source:'manual'});setUndo('Period started',()=>{state.periods=JSON.parse(old);save()})}
+  else{const conflict=findOverlap(t,null);if(conflict){alert(`This period would overlap the cycle starting ${conflict.start}. Edit the existing cycle dates first.`);return}state.periods.push({id:uid(),start:t,end:null,endKnown:true,source:'manual'});setUndo('Period started',()=>{state.periods=JSON.parse(old);save()})}
   save();
 };
 document.getElementById('clearSymptomsBtn').onclick=()=>{const t=selectedDate,old=JSON.stringify(state.symptoms[t]||{});delete state.symptoms[t];setUndo('Symptoms cleared',()=>{state.symptoms[t]=JSON.parse(old);save()});save()};

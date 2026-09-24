@@ -26,6 +26,8 @@ check('flow-clear undo',ui.includes("setUndo('Flow cleared'"));
 check('note-delete undo',ui.includes("setUndo('Note removed'"));
 check('CSV import accepted',index.includes('text/csv')&&index.includes('.csv')&&data.includes('stateFromCSV')&&data.includes('openCSVRestore'));
 check('custom symptoms',ui.includes('openCustomSymptomSheet(di)')&&ui.includes('custom:'+String.fromCharCode(36)+'{name}'));
+check('hot-flash symptom vocabulary',core.includes("['hotflash','Hot flashes / night heat']")&&core.includes("'night heat':'hotflash'"));
+check('unknown period end support',core.includes('p.endKnown!==false')&&data.includes("'end_known'")&&ui.includes('final end date was not recorded'));
 check('DST-safe day math',core.includes('Date.UTC')&&core.includes('function dayOrdinal'));
 check('day rollover refresh',core.includes('refreshForDeviceDate')&&core.includes('visibilitychange')&&core.includes('setInterval(refreshForDeviceDate,60000)'));
 check('calendar pain markers',core.includes('pain-dots')&&css.includes('pain-dots'));

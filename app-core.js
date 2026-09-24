@@ -8,7 +8,8 @@ const fmtShort=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short'});
 const symptoms=[
   ['bleeding','Bleeding'],['breast','Breast pain'],['pelvic','Pelvic pain'],['right','Right-sided pain'],['left','Left-sided pain'],
   ['back','Lower-back pain'],['thigh','Thigh or leg pain'],['fatigue','Fatigue'],['nausea','Nausea'],['bloating','Bloating'],
-  ['constipation','Constipation'],['diarrhoea','Diarrhea'],['urinary','Urinary discomfort'],['other','Other · add manually'],['headache','Headache']
+  ['constipation','Constipation'],['diarrhoea','Diarrhea'],['urinary','Urinary discomfort'],['headache','Headache'],
+  ['hotflash','Hot flashes / night heat'],['other','Other · add manually']
 ];
 const PAIN_IDS=new Set(['breast','pelvic','right','left','back','thigh','headache']);
 const FLOW_LEVEL={Spotting:1,Light:1,Medium:2,Heavy:3};
@@ -16,7 +17,7 @@ const severity=['Not logged','Mild','Moderate','Severe'];
 let state=loadState();
 let monthCursor=startOfMonth(new Date());
 let undoAction=null,toastTimer=null,pendingRestore=null;
-let renderedDay=todayISO();
+let renderedDay=todayISO(),selectedDate=renderedDay;
 
 function iso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function parse(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)}
@@ -37,6 +38,7 @@ function symptomIdFromLabel(label){
     'bleeding':'bleeding','heavy bleeding':'bleeding','breast pain':'breast','pelvic pain':'pelvic','right-sided pain':'right','right sided pain':'right',
     'left-sided pain':'left','left sided pain':'left','lower-back pain':'back','lower back pain':'back','thigh or leg pain':'thigh','fatigue':'fatigue',
     'nausea':'nausea','bloating':'bloating','constipation':'constipation','diarrhoea':'diarrhoea','diarrhea':'diarrhoea','urinary discomfort':'urinary','headache':'headache',
+    'hot flashes':'hotflash','hot flash':'hotflash','night heat':'hotflash','night sweats':'hotflash','hot flashes / night heat':'hotflash',
     'pelvic':'pelvic','right':'right','left':'left','back':'back','thigh':'thigh','urinary':'urinary','heavy':'bleeding'
   };
   if(aliases[lower])return aliases[lower];
@@ -50,14 +52,14 @@ function customSymptomsForDate(di){return Object.entries(state.symptoms[di]||{})
 
 function defaultState(){
   const t=todayISO();
-  return {version:3,profile:{typicalCycleLength:28,typicalPeriodDuration:5},periods:[{id:uid(),start:t,end:null,source:'prototype setup'}],symptoms:{[t]:{pelvic:2,right:2,back:2}},flows:{[t]:'Medium'},notes:{},lastBackup:null,created:t};
+  return {version:4,profile:{typicalCycleLength:28,typicalPeriodDuration:5},periods:[{id:uid(),start:t,end:null,endKnown:true,source:'prototype setup'}],symptoms:{[t]:{pelvic:2,right:2,back:2}},flows:{[t]:'Medium'},notes:{},lastBackup:null,created:t};
 }
 function normalizeState(raw){
   const fallback=defaultState(),input=raw&&typeof raw==='object'?raw:{};
   const profile=input.profile&&typeof input.profile==='object'?input.profile:{};
-  const periods=Array.isArray(input.periods)?input.periods.filter(p=>p&&/^\d{4}-\d{2}-\d{2}$/.test(p.start||'')).map(p=>({id:String(p.id||uid()),start:p.start,end:p.end||null,source:p.source||'manual'})):fallback.periods;
+  const periods=Array.isArray(input.periods)?input.periods.filter(p=>p&&/^\d{4}-\d{2}-\d{2}$/.test(p.start||'')).map(p=>({id:String(p.id||uid()),start:p.start,end:p.end||null,endKnown:p.endKnown!==false,source:p.source||'manual'})):fallback.periods;
   return {
-    version:3,
+    version:4,
     profile:{typicalCycleLength:Number(profile.typicalCycleLength)||28,typicalPeriodDuration:Number(profile.typicalPeriodDuration)||5},
     periods,
     symptoms:input.symptoms&&typeof input.symptoms==='object'?input.symptoms:{},
@@ -70,7 +72,7 @@ function normalizeState(raw){
 function loadState(){try{const raw=localStorage.getItem(KEY);return raw?normalizeState(JSON.parse(raw)):defaultState()}catch(e){return defaultState()}}
 function save(){localStorage.setItem(KEY,JSON.stringify(state));renderAll()}
 function activePeriod(){return state.periods.find(p=>!p.end)}
-function completedPeriods(){return state.periods.filter(p=>p.end).sort((a,b)=>a.start.localeCompare(b.start))}
+function completedPeriods(){return state.periods.filter(p=>p.end&&p.endKnown!==false).sort((a,b)=>a.start.localeCompare(b.start))}
 function cycleLengths(){const ps=[...state.periods].sort((a,b)=>a.start.localeCompare(b.start));let r=[];for(let i=1;i<ps.length;i++){const n=daysBetween(ps[i-1].start,ps[i].start);if(n>=15&&n<=60)r.push(n)}return r.slice(-6)}
 function periodDurations(){return completedPeriods().map(p=>daysBetween(p.start,p.end)+1).filter(n=>n>0&&n<15).slice(-6)}
 function predictionInfo(){
@@ -122,6 +124,13 @@ function makeSymptomButton(di,id,label){
   b.setAttribute('aria-label',`${label}: ${severity[level]}. Tap to change severity.`);b.innerHTML=`<strong>${label}</strong><span>${severity[level]}${level?' · tap to change':''}</span>`;
   b.onclick=()=>{const old=JSON.stringify(state.symptoms[di]||{});state.symptoms[di]=state.symptoms[di]||{};state.symptoms[di][id]=(level+1)%4;if(state.symptoms[di][id]===0)delete state.symptoms[di][id];setUndo('Symptom updated',()=>{state.symptoms[di]=JSON.parse(old);save()});save();if(backdrop?.classList.contains('open'))openSymptomsForDate(di)};return b;
 }
+function selectDate(di){
+  selectedDate=di;
+  renderToday();
+  renderCalendar();
+  const panel=document.getElementById('symptomsPanel');
+  if(panel){panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'})}
+}
 function renderToday(){
   const t=new Date(),tiso=todayISO(),active=activePeriod(),pi=predictionInfo(),next=nextPrediction();
   document.getElementById('heroDate').textContent=fmtLong.format(t);
@@ -137,8 +146,12 @@ function renderToday(){
     document.getElementById('periodAction').textContent='My period started today';
   }
   document.getElementById('confidenceBadge').textContent=pi?`${pi.confidence} prediction · ${pi.cycle}-day estimate`:'Prediction unavailable';
-  const grid=document.getElementById('symptomGrid');grid.innerHTML='';symptoms.forEach(([id,label])=>grid.appendChild(makeSymptomButton(tiso,id,label)));
-  const severe=painLevelForDate(tiso)===3;document.getElementById('safetyCard').classList.toggle('hidden',!severe);
+  const selectedLabel=selectedDate===tiso?`Today · ${fmtLong.format(parse(selectedDate))}`:fmtLong.format(parse(selectedDate));
+  document.getElementById('selectedDateLabel').textContent=selectedLabel;
+  document.getElementById('flowBtn').textContent=state.flows[selectedDate]?'Change flow':'Log flow';
+  document.getElementById('noteBtn').textContent=state.notes[selectedDate]?'Edit private note':'Add a private note';
+  const grid=document.getElementById('symptomGrid');grid.innerHTML='';symptoms.forEach(([id,label])=>grid.appendChild(makeSymptomButton(selectedDate,id,label)));
+  const severe=painLevelForDate(selectedDate)===3;document.getElementById('safetyCard').classList.toggle('hidden',!severe);
 }
 function renderCalendar(){
   document.getElementById('monthTitle').textContent=fmtMonth.format(monthCursor);
@@ -146,11 +159,11 @@ function renderCalendar(){
   const y=monthCursor.getFullYear(),m=monthCursor.getMonth(),first=new Date(y,m,1),offset=(first.getDay()+6)%7,start=addDays(first,-offset);
   for(let i=0;i<42;i++){
     const d=addDays(start,i),di=iso(d),btn=document.createElement('button'),isPeriod=periodOn(di),isPredicted=!isPeriod&&predictedOn(di),pain=painLevelForDate(di),count=symptomCountForDate(di),hasFlow=Boolean(state.flows[di]);
-    btn.className='day';if(d.getMonth()!==m)btn.classList.add('muted');if(di===todayISO())btn.classList.add('today');if(isPeriod)btn.classList.add('period');else if(isPredicted)btn.classList.add('predicted');
+    btn.className='day';if(d.getMonth()!==m)btn.classList.add('muted');if(di===todayISO())btn.classList.add('today');if(di===selectedDate)btn.classList.add('selected');if(isPeriod)btn.classList.add('period');else if(isPredicted)btn.classList.add('predicted');
     const states=[];if(di===todayISO())states.push('today');if(isPeriod)states.push('confirmed period day');else if(isPredicted)states.push('predicted period day');else states.push('no period recorded');if(pain)states.push(`${severity[pain]} pain`);if(count)states.push(`${count} symptom${count===1?'':'s'} logged`);if(hasFlow)states.push(`${state.flows[di]} bleeding`);
     btn.setAttribute('aria-label',`${fmtA11y.format(d)}, ${states.join(', ')}`);
     const painDots=pain?`<span class="pain-dots" aria-hidden="true">${'<i></i>'.repeat(pain)}</span>`:'';const other=(count&&!pain)?'<i class="other-symptom-dot" aria-hidden="true"></i>':'';
-    btn.innerHTML=`<span>${d.getDate()}</span>${painDots}${other}`;btn.onclick=()=>openDaySheet(di);grid.appendChild(btn);
+    btn.innerHTML=`<span>${d.getDate()}</span>${painDots}${other}`;btn.onclick=()=>selectDate(di);grid.appendChild(btn);
   }
   const timeline=document.getElementById('timeline');timeline.innerHTML='';const all=[...state.periods].sort((a,b)=>b.start.localeCompare(a.start)).slice(0,6);
   all.forEach(p=>{const b=document.createElement('button');b.className='segment';b.setAttribute('aria-label',`Open cycle starting ${fmtA11y.format(parse(p.start))}`);b.innerHTML=`<strong>${fmtShort.format(parse(p.start))}</strong><span>${p.end?`${daysBetween(p.start,p.end)+1} days`:'Active now'}</span>`;b.onclick=()=>openCycleSheet(p.id);timeline.appendChild(b)});
@@ -180,19 +193,17 @@ document.getElementById('undoBtn').onclick=()=>{if(undoAction)undoAction();undoA
 document.getElementById('periodAction').onclick=()=>{
   const t=todayISO(),active=activePeriod(),old=JSON.stringify(state.periods);
   if(active){if(t<active.start){alert('The end date cannot be before the start date.');return}active.end=t;setUndo('Period ended',()=>{state.periods=JSON.parse(old);save()})}
-  else{const conflict=findOverlap(t,null);if(conflict){alert(`This period would overlap the cycle starting ${conflict.start}. Edit or delete the existing cycle first.`);return}state.periods.push({id:uid(),start:t,end:null,source:'manual'});setUndo('Period started',()=>{state.periods=JSON.parse(old);save()})}
+  else{const conflict=findOverlap(t,null);if(conflict){alert(`This period would overlap the cycle starting ${conflict.start}. Edit the existing cycle dates first.`);return}state.periods.push({id:uid(),start:t,end:null,endKnown:true,source:'manual'});setUndo('Period started',()=>{state.periods=JSON.parse(old);save()})}
   save();
 };
-document.getElementById('clearSymptomsBtn').onclick=()=>{const t=todayISO(),old=JSON.stringify(state.symptoms[t]||{});delete state.symptoms[t];setUndo('Today’s symptoms cleared',()=>{state.symptoms[t]=JSON.parse(old);save()});save()};
+document.getElementById('clearSymptomsBtn').onclick=()=>{const t=selectedDate,old=JSON.stringify(state.symptoms[t]||{});delete state.symptoms[t];setUndo('Symptoms cleared',()=>{state.symptoms[t]=JSON.parse(old);save()});save()};
 document.getElementById('changeDatesBtn').onclick=()=>openDateSheet();
-document.getElementById('flowBtn').onclick=()=>openFlowSheet(todayISO());
-document.getElementById('noteBtn').onclick=()=>openNoteSheet(todayISO());
+document.getElementById('flowBtn').onclick=()=>openFlowSheet(selectedDate);
+document.getElementById('noteBtn').onclick=()=>openNoteSheet(selectedDate);
 document.getElementById('prevMonth').onclick=()=>{monthCursor=addMonths(monthCursor,-1);renderCalendar()};
 document.getElementById('nextMonth').onclick=()=>{monthCursor=addMonths(monthCursor,1);renderCalendar()};
 document.getElementById('todayMonth').onclick=()=>{monthCursor=startOfMonth(new Date());renderCalendar()};
-document.querySelectorAll('.tabbar button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(`${b.dataset.tab}View`).classList.add('active')});
-
-function refreshForDeviceDate(){const now=todayISO();if(now!==renderedDay){renderedDay=now;monthCursor=startOfMonth(new Date());renderAll()}}
+function refreshForDeviceDate(){const now=todayISO();if(now!==renderedDay){if(selectedDate===renderedDay)selectedDate=now;renderedDay=now;monthCursor=startOfMonth(new Date());renderAll()}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshForDeviceDate()});
 window.addEventListener('focus',refreshForDeviceDate);
 setInterval(refreshForDeviceDate,60000);

@@ -1,6 +1,6 @@
-# My Cycle — Test Agents
+# My Cycle — Release Agents
 
-This file defines the automated and human validation agents for the My Cycle app. The executable source checks live in `tests/run_agents.py`.
+The executable source checks live in `tests/run_agents.mjs`.
 
 ## Ground rules
 
@@ -8,54 +8,35 @@ This file defines the automated and human validation agents for the My Cycle app
 - No remote database, analytics, advertising, account or automatic cloud sync.
 - Confirmed history and predicted dates must always be distinguishable.
 - Predictions are estimates based only on confirmed cycle starts.
+- Confirmed cycles are corrected by editing dates; the UI must not offer individual cycle deletion.
+- Destructive day-level edits must provide Undo.
 - A critical privacy, data-loss, restore or prediction defect blocks release.
 - Tests use synthetic fixtures or source-level checks only; never commit personal health data.
 
-## Agent 1 — Orchestrator
+## Automated agents
 
-Runs all release checks and compiles the release result. Gate: no unresolved critical or major defect affecting recording, local persistence, prediction correctness, export, restore or offline behavior.
+1. Orchestrator — runs all release checks and compiles the gate result.
+2. Core Journey — period start/end, date correction, selected-day flow, symptoms, notes and Undo.
+3. Single-screen UX — no tabs, collapsible Symptoms/Calendar/History sections and selected-day logging.
+4. Calendar & Prediction — confirmed/predicted distinction, conservative prediction logic, DST-safe dates and pain markers.
+5. Privacy & Offline — local-only storage, no outbound health-data APIs and PWA cache behavior.
+6. Export & Restore — encrypted backup, CSV import/export and merge/replace restore.
+7. Data Integrity — overlap rejection, corrupt-state fallback, day rollover, no cycle-delete control, unknown final end date handling and day-level Undo.
+8. Accessibility & Visual Quality — labels, touch targets, Reduced Motion, dark mode, pain indicators and mobile-first hierarchy.
 
-## Agent 2 — Core Journey
+## Human validation
 
-Checks one-tap period start/end, date correction, flow, symptoms, custom symptoms, severity, notes, and Undo behavior.
-
-## Agent 3 — Calendar & Prediction
-
-Checks confirmed/predicted distinction, conservative prediction logic, DST-safe day arithmetic, calendar pain markers, and selected-date editing.
-
-## Agent 4 — Privacy & Offline
-
-Checks local-only storage, absence of outbound health-data APIs, PWA shell versioning, and offline cache structure.
-
-## Agent 5 — Export & Restore
-
-Checks encrypted backup primitives, CSV export/import, merge/replace restore behavior, and duplicate/overlap prevention.
-
-## Agent 6 — Data Integrity & Resilience
-
-Checks date validation, overlap rejection, selected-record deletion, corrupt-state fallback, day rollover refresh, and schema normalization.
-
-## Agent 7 — Accessibility & Usability
-
-Checks meaningful calendar labels, touch-target CSS, Reduced Motion, dark mode, and non-colour-only pain indicators.
-
-## Agent 8 — Visual Quality & Insights
-
-Checks the three-tab hierarchy, pain/symptom trend visualization, symptom ordering, and mobile-first layout.
-
-## Human Validation Agent
-
-Final iPhone checks:
-
-1. Today shows the correct period/cycle day after the device date changes.
-2. Any calendar date can be opened and its symptoms, bleeding/flow and note can be edited.
-3. CSV import from Files opens a merge/replace review instead of failing silently.
-4. Calendar pain severity markers are understandable without relying on colour alone.
-5. Insights renders the pain/symptom trend without horizontal page overflow.
-6. Existing local data remains present after the v3 web-app update.
+1. The app opens as one screen with no bottom tabs.
+2. Tap a calendar date: Symptoms opens for that date and bleeding/symptom changes persist immediately.
+3. A confirmed cycle can be corrected by editing dates, but there is no individual cycle-delete action.
+4. Removing day details, clearing flow, or deleting a note offers Undo.
+5. CSV import from Files opens a merge/replace review.
+6. Calendar pain severity remains understandable without relying on colour alone.
+7. History & Insights expands without horizontal page overflow.
+8. Existing local data remains present after the v4 update.
 
 ## Run
 
 ```bash
-python tests/run_agents.py
+node tests/run_agents.mjs
 ```

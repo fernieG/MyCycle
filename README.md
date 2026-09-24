@@ -12,7 +12,9 @@ My Cycle v4 moves the app to the intended one-screen experience:
 - bleeding and symptom changes save immediately for the selected day;
 - confirmed cycles are corrected by editing dates rather than deleting a cycle;
 - destructive day-level changes provide Undo;
-- existing CSV import, encrypted backup/restore, predictions, pain markers, insights and offline PWA behavior are retained.
+- existing CSV import, encrypted backup/restore, predictions, pain markers, insights and offline PWA behavior are retained;
+- hot flashes / night heat can be tracked directly;
+- a cycle can keep a last confirmed bleeding date with the final period end marked unknown, so cycle-length predictions remain usable without distorting typical period duration.
 
 ## Privacy model
 

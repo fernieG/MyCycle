@@ -21,7 +21,7 @@ The executable source checks live in `tests/run_agents.mjs`.
 4. Calendar & Prediction — confirmed/predicted distinction, conservative prediction logic, DST-safe dates and pain markers.
 5. Privacy & Offline — local-only storage, no outbound health-data APIs and PWA cache behavior.
 6. Export & Restore — encrypted backup, CSV import/export and merge/replace restore.
-7. Data Integrity — overlap rejection, corrupt-state fallback, day rollover, no cycle-delete control and day-level Undo.
+7. Data Integrity — overlap rejection, corrupt-state fallback, day rollover, no cycle-delete control, unknown final end date handling and day-level Undo.
 8. Accessibility & Visual Quality — labels, touch targets, Reduced Motion, dark mode, pain indicators and mobile-first hierarchy.
 
 ## Human validation

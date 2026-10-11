@@ -78,3 +78,28 @@ test('day calculations stay stable across daylight saving transitions', () => {
   assert.equal(result.a, 2);
   assert.equal(result.b, 2);
 });
+
+
+test('calendar ovulation estimate is derived from next period, not simply cycle day 14', () => {
+  const sandbox = {state:{
+    profile: { typicalCycleLength:28, typicalPeriodDuration:5 },
+    periods: ['2025-01-14','2025-02-10','2025-03-12','2025-04-07'].map(start=>({start,end:null,endKnown:true}))
+  }};
+  const result = runInNewContext(
+    actualFunctions + "\novulationEstimate('2025-04-15')", sandbox
+  );
+  assert.equal(result.ovulation,'2025-04-20');
+  assert.equal(result.fertileStart,'2025-04-15');
+  assert.equal(result.fertileEnd,'2025-04-21');
+  assert.equal(result.estimated,true);
+});
+
+test('expired unconfirmed prediction does not roll over into imaginary future cycles', () => {
+  const sandbox = {state:{
+    profile: { typicalCycleLength:28, typicalPeriodDuration:5 },
+    periods: ['2025-01-14','2025-02-10','2025-03-12','2025-04-07'].map(start=>({start,end:null,endKnown:true}))
+  }};
+  assert.equal(
+    runInNewContext(actualFunctions + "\novulationEstimate('2025-05-05')",sandbox),null
+  );
+});

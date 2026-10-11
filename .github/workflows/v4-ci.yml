@@ -15,3 +15,6 @@ jobs:
           node-version: "22"
       - name: Run release agents
         run: node tests/run_agents.mjs
+
+      - name: Run real prediction algorithm regression tests (fictional inputs)
+        run: node --test tests/prediction-regression.test.mjs

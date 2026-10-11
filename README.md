@@ -14,7 +14,10 @@ My Cycle v4 moves the app to the intended one-screen experience:
 - destructive day-level changes provide Undo;
 - existing CSV import, encrypted backup/restore, predictions, pain markers, insights and offline PWA behavior are retained;
 - hot flashes / night heat can be tracked directly;
+- a calendar-only ovulation date and possible fertile window are estimated from the predicted next period (approximately 14 days before the estimated start, with a possible fertile window from five days before through one day after ovulation);
 - a cycle can keep a last confirmed bleeding date with the final period end marked unknown, so cycle-length predictions remain usable without distorting typical period duration.
+
+**Medical limitation:** ovulation timing is an estimate, not evidence that ovulation occurred. Cycle variation may make date-based forecasts inaccurate. Do **not** use fertility predictions as contraception. The ovulation estimate is hidden when an expected cycle has passed without a confirmed new period start. See the [ACOG fertility-awareness FAQ](https://www.acog.org/womens-health/faqs/fertility-awareness-based-methods-of-family-planning) and [NHS period and fertility guide](https://www.nhs.uk/conditions/periods/fertility-in-the-menstrual-cycle/).
 
 ## Privacy model
 
@@ -36,9 +39,10 @@ Avoid Private Browsing. Export an encrypted backup before deleting the app, clea
 
 ```bash
 node tests/run_agents.mjs
+node --test tests/prediction-regression.test.mjs
 ```
 
-The release checks use synthetic/source-level data only.
+The release checks use synthetic/source-level data only. Prediction regression tests execute the app's real date calculation logic on entirely fictional history.
 
 ## Deployment
 

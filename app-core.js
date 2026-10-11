@@ -87,6 +87,20 @@ function predictionInfo(){
   while(d<addMonths(new Date(),7)){starts.push(new Date(d));d=addDays(d,cycle)}
   return {cycle,duration,window,starts,confidence:lengths.length>=3?(variation<=4?'High':variation<=8?'Medium':'Limited'):'Limited',cyclesUsed:lengths.length};
 }
+// Calendar-only ovulation/fertility estimates, NOT confirmation or contraception.
+// ACOG: ovulation typically ~14 days before next menses, sperm can live up to
+// five days, and conception is possible until ~one day after ovulation.
+// https://www.acog.org/womens-health/faqs/fertility-awareness-based-methods-of-family-planning
+function ovulationEstimate(asOf=todayISO()){
+  const pi=predictionInfo();if(!pi||!state.periods.length)return null;
+  const latest=[...state.periods].sort((a,b)=>a.start.localeCompare(b.start)).at(-1);
+  const next=iso(addDays(parse(latest.start),pi.cycle));
+  // If a predicted period has passed without confirmation, do not
+  // extrapolate another unconfirmed cycle and call it a fertility estimate.
+  if(asOf>next)return null;
+  const ov=addDays(parse(next),-14);
+  return {ovulation:iso(ov),fertileStart:iso(addDays(ov,-5)),fertileEnd:iso(addDays(ov,1)),estimated:true};
+}
 function serializablePrediction(){const p=predictionInfo();return p?{...p,starts:p.starts.map(iso),generatedAt:new Date().toISOString()}:null}
 function periodOn(dateISO){return state.periods.some(p=>dateISO>=p.start&&dateISO<=(p.end||todayISO()))}
 function predictedOn(dateISO){const pi=predictionInfo();if(!pi)return false;return pi.starts.some(s=>{const start=iso(s),end=iso(addDays(s,pi.duration-1));return dateISO>=start&&dateISO<=end})}
@@ -146,6 +160,9 @@ function renderToday(){
     document.getElementById('periodAction').textContent='My period started today';
   }
   document.getElementById('confidenceBadge').textContent=pi?`${pi.confidence} prediction · ${pi.cycle}-day estimate`:'Prediction unavailable';
+  const fertile=ovulationEstimate();
+  const fertilityLabel=document.getElementById('fertilityEstimate');
+  if(fertilityLabel)fertilityLabel.textContent=fertile?`Calendar-only estimate: ovulation ~${fmtShort.format(parse(fertile.ovulation))}; possible fertile days ${fmtShort.format(parse(fertile.fertileStart))}–${fmtShort.format(parse(fertile.fertileEnd))}. Not reliable for contraception or confirmation of ovulation.`:'Ovulation timing cannot be estimated reliably from this unconfirmed cycle.';
   const selectedLabel=selectedDate===tiso?`Today · ${fmtLong.format(parse(selectedDate))}`:fmtLong.format(parse(selectedDate));
   document.getElementById('selectedDateLabel').textContent=selectedLabel;
   document.getElementById('flowBtn').textContent=state.flows[selectedDate]?'Change flow':'Log flow';
